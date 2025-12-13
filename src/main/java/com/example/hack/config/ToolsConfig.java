@@ -17,4 +17,16 @@ public class ToolsConfig {
     public Function<AppointmentRequest, Appointment> scheduleAppointment(AppointmentService appointmentService) {
         return appointmentService::scheduleAppointment;
     }
+
+    @Bean
+    @Description("Get clinical history summary for a patient")
+    public Function<com.example.hack.dto.PatientIdRequest, String> getClinicalHistory(com.example.hack.service.TriageToolsService toolsService) {
+        return toolsService::getClinicalHistory;
+    }
+
+    @Bean
+    @Description("Get available appointment slots for a specialty")
+    public Function<com.example.hack.dto.SpecialtyRequest, java.util.List<com.example.hack.dto.TimeSlot>> getAvailableSlots(com.example.hack.service.TriageToolsService toolsService) {
+        return toolsService::getAvailableSlots;
+    }
 }

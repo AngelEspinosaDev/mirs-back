@@ -41,6 +41,11 @@ public class TriageService {
             6. Si aplica, sugerir especialidad para autorización basada en síntomas e historia clínica, justificada en 1 línea.
             7. Si faltan datos críticos, formular máximo 3 preguntas cerradas (sí/no) antes de decidir.
 
+            **Uso de Herramientas**
+            1. **getClinicalHistory**: DEBES llamar a esta herramienta primero usando el Patient ID del usuario: {patientId}.
+            2. **getAvailableSlots**: Usa esta herramienta si el usuario pregunta por disponibilidad o quiere agendar (para saber qué horarios hay).
+            3. **scheduleAppointment**: Usa esta herramienta si el usuario confirma agendar una cita.
+
             **Objetivo**
             Garantizar que cada paciente sea orientado hacia el nivel de atención correcto de forma rápida, segura y explicable, minimizando riesgos al detectar signos de alarma y maximizando eficiencia al evitar derivaciones innecesarias.
 
@@ -56,9 +61,9 @@ public class TriageService {
             - Reacción alérgica severa (hinchazón + dificultad respiratoria)
 
             Criterios de clasificación:
-            - ALTO: red flags o riesgo alto por historia + síntomas actuales → EMERGENCIAS o CITA_PRIORITARIA
-            - MEDIO: sin red flags, pero dolor moderado/intenso o requiere valoración 24-48h → CITA_PRIORITARIA o CITA_GENERAL
-            - BAJO: síntomas leves, sin red flags → AUTOCUIDADO con vigilancia
+            - ALTO: red flags o riesgo alto por historia + síntomas actuales -> EMERGENCIAS o CITA_PRIORITARIA
+            - MEDIO: sin red flags, pero dolor moderado/intenso o requiere valoración 24-48h -> CITA_PRIORITARIA o CITA_GENERAL
+            - BAJO: síntomas leves, sin red flags -> AUTOCUIDADO con vigilancia
 
             Reglas de seguridad obligatorias:
             - NO diagnostiques. Usa frases como "por lo que describes, lo más seguro es…" o "podría ser una señal de alarma de…"
@@ -75,12 +80,8 @@ public class TriageService {
               "epsBrief": "...",
               "followUpQuestions": []
             }
-            
-            Usa la herramienta scheduleAppointment si el paciente solicita explícitamente agendar una cita y tienes los datos necesarios (fecha, motivo, especialidad, doctor).
-
-            Contexto del Paciente (Historia Clínica):
-            {historyContext}
             """;
+
 
     public ChatTriageResponse processTriage(String patientId, String sessionId, String userContent, String language) {
         // 1. Session Management
@@ -88,20 +89,19 @@ public class TriageService {
                 ? UUID.randomUUID().toString() 
                 : sessionId;
 
-        // 2. Retrieve History Context
-        String historyContext = getPatientHistoryContext(patientId);
-
-        // 3. Build Prompt
-        String formattedSystemPrompt = SYSTEM_PROMPT.replace("{historyContext}", historyContext);
+        // 2. Build Prompt (No history injection, just PatientId for tool use hint)
+        String formattedSystemPrompt = SYSTEM_PROMPT.replace("{patientId}", patientId);
         Message systemMessage = new org.springframework.ai.chat.messages.SystemMessage(formattedSystemPrompt);
         UserMessage userMessage = new UserMessage(userContent);
         
         Prompt prompt = new Prompt(List.of(systemMessage, userMessage), 
             OpenAiChatOptions.builder()
+                .withFunction("getClinicalHistory")
+                .withFunction("getAvailableSlots")
                 .withFunction("scheduleAppointment")
                 .build());
 
-        // 4. Call LLM
+        // 3. Call LLM
         String rawResponse = chatModel.call(prompt).getResult().getOutput().getContent();
 
         // 5. Parse Response & Persist
@@ -119,9 +119,9 @@ public class TriageService {
             session.setTriageResult(result);
             triageSessionRepository.save(session);
 
-            // 6. Map to DTO
             ChatTriageResponse response = new ChatTriageResponse();
             response.setSessionId(currentSessionId);
+            response.setPatientId(patientId);
             response.setUrgencyLevel(result.getUrgencyLevel());
             response.setRecommendation(result.getRecommendation());
             response.setWarningSigns(result.getWarningSigns());
@@ -135,43 +135,5 @@ public class TriageService {
         }
     }
 
-    private String getPatientHistoryContext(String patientId) {
-        if (patientId == null) return "No patient ID provided.";
-        
-        List<ClinicalHistory> history = clinicalHistoryRepository.findByPatientId(patientId);
-        if (history.isEmpty()) return "No clinical history found for patient " + patientId;
 
-        // Summarize history (taking the latest entry or aggregating)
-        ClinicalHistory latest = history.get(0); // Assuming order or just taking first for now
-        StringBuilder sb = new StringBuilder();
-        
-        // Datos de identificación
-        if (latest.getPatient().getFullName() != null && !latest.getPatient().getFullName().isBlank()) {
-            sb.append("Paciente: ").append(latest.getPatient().getFullName().trim()).append(". ");
-        }
-        if (latest.getPatient().getDni() != null) {
-            sb.append("DNI: ").append(latest.getPatient().getDni()).append(". ");
-        }
-        
-        sb.append("Edad: ").append(latest.getPatient().getDateOfBirth() != null ? latest.getPatient().getDateOfBirth() : "Desc").append(". ");
-        sb.append("Sexo: ").append(latest.getPatient().getSex()).append(". ");
-        
-        if (latest.getChronicConditions() != null && !latest.getChronicConditions().isEmpty()) {
-            sb.append("Condiciones Crónicas: ").append(
-                latest.getChronicConditions().stream().map(com.example.hack.model.ChronicCondition::getName).collect(Collectors.joining(", "))
-            ).append(". ");
-        }
-        if (latest.getAllergies() != null && !latest.getAllergies().isEmpty()) {
-            sb.append("Alergias: ").append(
-                latest.getAllergies().stream().map(com.example.hack.model.Allergy::getName).collect(Collectors.joining(", "))
-            ).append(". ");
-        }
-        if (latest.getCriticalMedications() != null && !latest.getCriticalMedications().isEmpty()) {
-            sb.append("Medicamentos Críticos: ").append(
-                latest.getCriticalMedications().stream().map(com.example.hack.model.CriticalMedication::getName).collect(Collectors.joining(", "))
-            ).append(".");
-        }
-        
-        return sb.toString();
-    }
 }
