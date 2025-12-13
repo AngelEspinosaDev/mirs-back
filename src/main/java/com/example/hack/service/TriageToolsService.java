@@ -15,8 +15,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TriageToolsService {
 
+
     private final ClinicalHistoryRepository clinicalHistoryRepository;
     private final AppointmentService appointmentService;
+    private final com.example.hack.repository.SpecialtyRepository specialtyRepository;
 
     public String getClinicalHistory(PatientIdRequest request) {
         if (request.patientId() == null) return "No patient ID provided.";
@@ -49,5 +51,11 @@ public class TriageToolsService {
 
     public List<TimeSlot> getAvailableSlots(SpecialtyRequest request) {
         return appointmentService.getAvailableSlots(request.specialty());
+    }
+
+    public List<String> getAllSpecialties() {
+        return specialtyRepository.findAll().stream()
+                .map(com.example.hack.model.Specialty::getName)
+                .collect(Collectors.toList());
     }
 }

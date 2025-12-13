@@ -85,7 +85,12 @@ public class AppointmentService {
         }
 
         return dbSlots.stream()
-                .map(slot -> new TimeSlot(slot.getDateTime(), slot.getDoctor().getId(), slot.getDoctor().getName()))
+                .map(slot -> new TimeSlot(
+                    slot.getDateTime(), 
+                    slot.getDoctor().getId(), 
+                    slot.getDoctor().getName(),
+                    slot.getDoctor().getSpecialty().getName()
+                ))
                 .limit(5)
                 .collect(Collectors.toList());
     }

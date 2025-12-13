@@ -40,11 +40,22 @@ public class ClinicalHistoryController {
 
         ClinicalHistory history = new ClinicalHistory();
         history.setPatient(patient);
-        history.setDemographics(dto.getDemographics());
-        history.setMetadata(dto.getMetadata());
-        history.setTriageHistoryFlags(dto.getTriageHistoryFlags());
+        
+        // Map Metadata
+        if (dto.getMetadata() != null) {
+            history.setLastUpdate(dto.getMetadata().getLastUpdated());
+        }
+
+        // Map Risk Factors & Special Conditions
         if (dto.getRiskFactors() != null) {
-            history.setSpecialConditions(dto.getRiskFactors().getSpecialConditions());
+            if (dto.getRiskFactors().getSpecialConditions() != null) {
+                com.example.hack.model.SpecialCondition sc = new com.example.hack.model.SpecialCondition();
+                sc.setPregnant(dto.getRiskFactors().getSpecialConditions().getPregnant());
+                sc.setPostpartum(dto.getRiskFactors().getSpecialConditions().getPostpartum());
+                sc.setImmunosuppressed(dto.getRiskFactors().getSpecialConditions().getImmunosuppressed());
+                sc.setRecentSurgery(dto.getRiskFactors().getSpecialConditions().getRecentSurgery());
+                history.setSpecialCondition(sc);
+            }
             
             if (dto.getRiskFactors().getChronicConditions() != null) {
                 List<com.example.hack.model.ChronicCondition> conditions = dto.getRiskFactors().getChronicConditions().stream()
@@ -103,10 +114,10 @@ public class ClinicalHistoryController {
     static class ClinicalHistoryDTO {
         @com.fasterxml.jackson.annotation.JsonProperty("patientId")
         private String patientId;
-        private ClinicalHistory.Demographics demographics;
+        private DemographicsDTO demographics;
         private RiskFactorsDTO riskFactors;
-        private ClinicalHistory.TriageHistoryFlags triageHistoryFlags;
-        private ClinicalHistory.Metadata metadata;
+        private Object triageHistoryFlags; // Ignored/Generic
+        private MetadataDTO metadata;
     }
 
     @lombok.Data
@@ -114,6 +125,27 @@ public class ClinicalHistoryController {
         private List<String> chronicConditions;
         private List<String> allergies;
         private List<String> criticalMedications;
-        private ClinicalHistory.SpecialConditions specialConditions;
+        private SpecialConditionsDTO specialConditions;
+    }
+
+    @lombok.Data
+    static class DemographicsDTO {
+        private String dateOfBirth;
+        private String sex;
+        private String bloodType;
+    }
+
+    @lombok.Data
+    static class MetadataDTO {
+        private String sourceSystem;
+        private String lastUpdated;
+    }
+
+    @lombok.Data
+    static class SpecialConditionsDTO {
+        private Boolean pregnant;
+        private Boolean postpartum;
+        private Boolean immunosuppressed;
+        private Boolean recentSurgery;
     }
 }

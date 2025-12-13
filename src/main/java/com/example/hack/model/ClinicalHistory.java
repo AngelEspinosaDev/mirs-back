@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Column;
+import jakarta.persistence.OneToOne;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +38,12 @@ public class ClinicalHistory {
 
 
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
-    private Demographics demographics;
+    @Column(name = "last_update")
+    private String lastUpdate;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "special_condition_id", referencedColumnName = "id")
+    private SpecialCondition specialCondition;
 
     @OneToMany(mappedBy = "clinicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChronicCondition> chronicConditions;
@@ -49,53 +53,7 @@ public class ClinicalHistory {
 
     @OneToMany(mappedBy = "clinicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CriticalMedication> criticalMedications;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
-    private SpecialConditions specialConditions;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "triage_history_flags", columnDefinition = "json")
-    private TriageHistoryFlags triageHistoryFlags;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
-    private Metadata metadata;
     
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class SpecialConditions {
-        private Boolean pregnancy;
-        private Boolean immunosuppression;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TriageHistoryFlags {
-        private Boolean previousEmergencyVisits;
-        private Boolean recurrentSymptoms;
-        private Boolean highRiskAlerts;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Demographics {
-        private String dateOfBirth;
-        private String sex;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Metadata {
-        private String source;
-        private String lastUpdated;
-        private Boolean validated;
-    }
 }

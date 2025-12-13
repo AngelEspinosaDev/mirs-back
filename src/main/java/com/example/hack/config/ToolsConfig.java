@@ -29,4 +29,10 @@ public class ToolsConfig {
     public Function<com.example.hack.dto.SpecialtyRequest, java.util.List<com.example.hack.dto.TimeSlot>> getAvailableSlots(com.example.hack.service.TriageToolsService toolsService) {
         return toolsService::getAvailableSlots;
     }
+
+    @Bean
+    @Description("Get all available medical specialties from the system")
+    public Function<Void, java.util.List<String>> getAllSpecialties(com.example.hack.service.TriageToolsService toolsService) {
+        return (input) -> toolsService.getAllSpecialties();
+    }
 }
