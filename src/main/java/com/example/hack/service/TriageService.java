@@ -93,6 +93,22 @@ public class TriageService {
               "epsBrief": "...",
               "followUpQuestions": []
             }
+            
+            **REGLAS CRÍTICAS - NO NEGOCIABLES:**
+            1. Los campos "urgencyLevel" y "recommendation" son OBLIGATORIOS y NUNCA pueden ser null, vacíos o undefined.
+            2. SIEMPRE debes proporcionar un valor válido para ambos campos en CADA respuesta.
+            3. Si la información del usuario es insuficiente o vaga:
+               - urgencyLevel: "BAJO"
+               - recommendation: "Para poder ayudarte mejor, necesito que me des más detalles. Por favor, describe con más detalle cómo te sientes, cuándo comenzaron los síntomas y qué tan intensos son."
+               - followUpQuestions: ["¿Cuándo comenzaron los síntomas?", "¿Qué tan intenso es el dolor del 1 al 10?", "¿Has notado otros síntomas?"]
+            4. Ejemplo de respuesta válida cuando falta información:
+               {
+                 "urgencyLevel": "BAJO",
+                 "recommendation": "Necesito más información para clasificar correctamente tu caso. Por favor, explícame con más detalle qué síntomas tienes y desde cuándo.",
+                 "warningSigns": [],
+                 "epsBrief": "Información insuficiente para clasificación inicial.",
+                 "followUpQuestions": ["¿Qué síntomas específicos tienes?", "¿Desde cuándo?", "¿Qué tan intensos son?"]
+               }
             """;
 
 
@@ -165,6 +181,14 @@ public class TriageService {
             assistantMsg.setContent(rawResponse);
             assistantMsg.setTimestamp(java.time.LocalDateTime.now());
             chatMessageRepository.save(assistantMsg);
+
+            // VALIDATION: Ensure urgencyLevel and recommendation are never null
+            if (result.getUrgencyLevel() == null || result.getUrgencyLevel().isEmpty()) {
+                result.setUrgencyLevel("BAJO");
+            }
+            if (result.getRecommendation() == null || result.getRecommendation().isEmpty()) {
+                result.setRecommendation("Necesito más información para poder ayudarte mejor. Por favor, describe con más detalle cómo te sientes, cuándo comenzaron los síntomas y qué tan intensos son.");
+            }
 
             ChatTriageResponse response = new ChatTriageResponse();
             response.setSessionId(currentSessionId);

@@ -4,3 +4,15 @@ Syntax error in SQL statement "SELECT * FROM PATIENTS -- 1) Insertar Paciente (I
 SELECT * FROM PATIENTS -- 1) Insertar Paciente (ID 20)
 INSERT INTO patients (id, first_name, last_name, dni, date_of_birth, sex) 
 VALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE') [42000-232]
+2025-12-13 01:57:39.121496-05:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Error de Sintaxis en sentencia SQL "SELECT * FROM PATIENTS -- 1) Insertar Paciente (ID 20)\000d\000aINSERT [*]INTO patients (id, first_name, last_name, dni, date_of_birth, sex) \000d\000aVALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE')"
+Syntax error in SQL statement "SELECT * FROM PATIENTS -- 1) Insertar Paciente (ID 20)\000d\000aINSERT [*]INTO patients (id, first_name, last_name, dni, date_of_birth, sex) \000d\000aVALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE')"; SQL statement:
+SELECT * FROM PATIENTS -- 1) Insertar Paciente (ID 20)
+INSERT INTO patients (id, first_name, last_name, dni, date_of_birth, sex) 
+VALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE') [42000-232]
+2025-12-13 01:57:47.416366-05:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Error de Sintaxis en sentencia SQL "[*]Insertar Paciente (ID 20)\000d\000aINSERT INTO patients (id, first_name, last_name, dni, date_of_birth, sex) \000d\000aVALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE')"; se esperaba "INSERT"
+Syntax error in SQL statement "[*]Insertar Paciente (ID 20)\000d\000aINSERT INTO patients (id, first_name, last_name, dni, date_of_birth, sex) \000d\000aVALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE')"; expected "INSERT"; SQL statement:
+Insertar Paciente (ID 20)
+INSERT INTO patients (id, first_name, last_name, dni, date_of_birth, sex) 
+VALUES (20, 'Juan', 'Ariza', '12345678', '1985-05-15', 'MALE') [42001-232]
