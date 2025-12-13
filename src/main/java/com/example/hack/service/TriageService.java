@@ -25,6 +25,7 @@ public class TriageService {
     private final ClinicalHistoryRepository clinicalHistoryRepository;
     private final TriageSessionRepository triageSessionRepository;
     private final ChatModel chatModel;
+    private final com.example.hack.repository.ChatMessageRepository chatMessageRepository;
     private final ObjectMapper objectMapper;
 
     private static final String SYSTEM_PROMPT = """
@@ -51,7 +52,10 @@ public class TriageService {
                - **OBLIGATORIO para urgencia MEDIO**: Después de seleccionar la especialidad con getAllSpecialties, llama a esta herramienta para mostrar citas disponibles.
                - **FORMATO DE RESPUESTA PARA MEDIO**: En el campo "recommendation", NO uses solo "CITA_PRIORITARIA". En su lugar, escribe un mensaje detallado con emojis como: "Debe agendar una cita con [ESPECIALIDAD]. 📅 Horarios disponibles: 🩺 [Doctor X - Fecha/Hora], 🩺 [Doctor Y - Fecha/Hora]... Mientras espera su cita: [recomendaciones de autocuidado específicas para los síntomas, ej: evitar alimentos irritantes, mantener hidratación, etc.]"
                - **IMPORTANTE**: Si esta herramienta devuelve una lista vacía o no hay doctores con la especialidad seleccionada, en el campo "recommendation" escribe: "❌ Lo sentimos, no hay disponibilidad para [ESPECIALIDAD] en este momento. Por favor, intente más tarde o contacte directamente con la EPS."
-            4. **scheduleAppointment**: Usa esta herramienta si el usuario confirma agendar una cita.
+            4. **scheduleAppointment**: 
+               - Usa esta herramienta cuando el usuario CONFIRME que quiere agendar una cita específica (debe indicar fecha, hora y doctor).
+               - Parámetros requeridos: patientId, doctorId, dateTime (formato: YYYY-MM-DDTHH:mm:ss), reason, specialty
+               - **FORMATO DE RESPUESTA DESPUÉS DE AGENDAR**: En el campo "recommendation", escribe: "✅ ¡Cita asignada exitosamente! 🎉 Su cita con [Doctor] en [Especialidad] está confirmada para el [Fecha y Hora]. Mientras espera su cita: [recomendaciones específicas de autocuidado según síntomas]"
 
             **Objetivo**
             Garantizar que cada paciente sea orientado hacia el nivel de atención correcto de forma rápida, segura y explicable, minimizando riesgos al detectar signos de alarma y maximizando eficiencia al evitar derivaciones innecesarias.
@@ -98,12 +102,27 @@ public class TriageService {
                 ? UUID.randomUUID().toString() 
                 : sessionId;
 
-        // 2. Build Prompt (No history injection, just PatientId for tool use hint)
-        String formattedSystemPrompt = SYSTEM_PROMPT.replace("{patientId}", patientId);
-        Message systemMessage = new org.springframework.ai.chat.messages.SystemMessage(formattedSystemPrompt);
-        UserMessage userMessage = new UserMessage(userContent);
+        // 2. Retrieve conversation history
+        List<com.example.hack.model.ChatMessage> history = chatMessageRepository.findBySessionIdOrderByTimestampAsc(currentSessionId);
         
-        Prompt prompt = new Prompt(List.of(systemMessage, userMessage), 
+        // 3. Build message list with history
+        String formattedSystemPrompt = SYSTEM_PROMPT.replace("{patientId}", patientId);
+        List<Message> messages = new java.util.ArrayList<>();
+        messages.add(new org.springframework.ai.chat.messages.SystemMessage(formattedSystemPrompt));
+        
+        // Add conversation history
+        for (com.example.hack.model.ChatMessage msg : history) {
+            if ("USER".equals(msg.getRole())) {
+                messages.add(new UserMessage(msg.getContent()));
+            } else if ("ASSISTANT".equals(msg.getRole())) {
+                messages.add(new org.springframework.ai.chat.messages.AssistantMessage(msg.getContent()));
+            }
+        }
+        
+        // Add current user message
+        messages.add(new UserMessage(userContent));
+        
+        Prompt prompt = new Prompt(messages, 
             OpenAiChatOptions.builder()
                 .withFunction("getClinicalHistory")
                 .withFunction("getAllSpecialties")
@@ -111,7 +130,7 @@ public class TriageService {
                 .withFunction("scheduleAppointment")
                 .build());
 
-        // 3. Call LLM
+        // 4. Call LLM
         String rawResponse = chatModel.call(prompt).getResult().getOutput().getContent();
 
         // 5. Parse Response & Persist
@@ -128,6 +147,24 @@ public class TriageService {
             session.setAssistantResponse(rawResponse); // Store raw JSON response
             session.setTriageResult(result);
             triageSessionRepository.save(session);
+
+            // Save user message to history
+            com.example.hack.model.ChatMessage userMsg = new com.example.hack.model.ChatMessage();
+            userMsg.setSessionId(currentSessionId);
+            userMsg.setPatientId(patientId);
+            userMsg.setRole("USER");
+            userMsg.setContent(userContent);
+            userMsg.setTimestamp(java.time.LocalDateTime.now());
+            chatMessageRepository.save(userMsg);
+
+            // Save assistant message to history
+            com.example.hack.model.ChatMessage assistantMsg = new com.example.hack.model.ChatMessage();
+            assistantMsg.setSessionId(currentSessionId);
+            assistantMsg.setPatientId(patientId);
+            assistantMsg.setRole("ASSISTANT");
+            assistantMsg.setContent(rawResponse);
+            assistantMsg.setTimestamp(java.time.LocalDateTime.now());
+            chatMessageRepository.save(assistantMsg);
 
             ChatTriageResponse response = new ChatTriageResponse();
             response.setSessionId(currentSessionId);
