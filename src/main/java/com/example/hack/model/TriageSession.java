@@ -42,10 +42,12 @@ public class TriageSession {
 
     @Data
     public static class TriageResult {
+        private String processState;
         private String urgencyLevel;
         private String recommendation;
         private java.util.List<String> warningSigns;
         private String epsBrief;
         private java.util.List<String> followUpQuestions;
+        private String previousContext;
     }
 }

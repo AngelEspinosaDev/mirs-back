@@ -29,11 +29,18 @@ public class AppointmentService {
     private final com.example.hack.repository.AvailableSlotRepository availableSlotRepository;
 
     public Appointment scheduleAppointment(AppointmentRequest request) {
+        if (request.getPatientId() == null) {
+            throw new IllegalArgumentException("El ID del paciente es obligatorio para agendar.");
+        }
+        if (request.getDoctorId() == null) {
+            throw new IllegalArgumentException("El ID del doctor es obligatorio. Por favor selecciona un doctor específico.");
+        }
+
         Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Paciente no encontrado con ID: " + request.getPatientId()));
 
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("Doctor no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Doctor no encontrado con ID: " + request.getDoctorId()));
 
         // Validation: Cannot have another future appointment for the SAME specialty
         boolean alreadyHasAppointment = appointmentRepository.existsByPatientIdAndSpecialtyIdAndDateTimeAfter(

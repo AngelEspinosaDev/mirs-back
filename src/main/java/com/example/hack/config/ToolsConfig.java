@@ -35,4 +35,10 @@ public class ToolsConfig {
     public Function<Void, java.util.List<String>> getAllSpecialties(com.example.hack.service.TriageToolsService toolsService) {
         return (input) -> toolsService.getAllSpecialties();
     }
+
+    @Bean
+    @Description("Find a doctor by name")
+    public Function<String, com.example.hack.model.Doctor> getDoctorByName(com.example.hack.service.TriageToolsService toolsService) {
+        return (name) -> toolsService.getDoctorByName(name);
+    }
 }

@@ -7,9 +7,11 @@ import java.util.List;
 public class ChatTriageResponse {
     private String sessionId;
     private String patientId;
+    private String processState; // INICIADO, INFORMACIÓN_RECOPILADA, etc.
     private String urgencyLevel; // ALTO, MEDIO, BAJO
     private String recommendation; // EMERGENCIAS, CITA_PRIORITARIA, CITA_GENERAL, AUTOCUIDADO
     private List<String> warningSigns;
     private String epsBrief;
     private List<String> followUpQuestions;
+    private String previousContext;
 }

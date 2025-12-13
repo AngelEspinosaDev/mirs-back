@@ -19,6 +19,7 @@ public class TriageToolsService {
     private final ClinicalHistoryRepository clinicalHistoryRepository;
     private final AppointmentService appointmentService;
     private final com.example.hack.repository.SpecialtyRepository specialtyRepository;
+    private final com.example.hack.repository.DoctorRepository doctorRepository;
 
     public String getClinicalHistory(PatientIdRequest request) {
         if (request.patientId() == null) return "No patient ID provided.";
@@ -57,5 +58,9 @@ public class TriageToolsService {
         return specialtyRepository.findAll().stream()
                 .map(com.example.hack.model.Specialty::getName)
                 .collect(Collectors.toList());
+    }
+
+    public com.example.hack.model.Doctor getDoctorByName(String name) {
+        return doctorRepository.findByNameContainingIgnoreCase(name).orElse(null);
     }
 }
